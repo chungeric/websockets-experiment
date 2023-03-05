@@ -1,0 +1,21 @@
+{
+  "name": "websockets-experiment",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js"
+  },
+  "keywords": [],
+  "author": "Eric Chung",
+  "license": "MIT",
+  "devDependencies": {
+    "nodemon": "^2.0.21"
+  },
+  "dependencies": {
+    "uuid": "^9.0.0",
+    "ws": "^8.12.1"
+  }
+}

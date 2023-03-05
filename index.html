@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Web Sockets Experiment</title>
+    <style>
+      html, body {
+        margin: 0;
+      }
+      canvas {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+      }
+    </style>
+  </head>
+
+  <body>
+    <canvas id="canvas"></canvas>
+    <script>
+      let playersData
+      const ws = new WebSocket(`ws://${location.host}`);
+      const canvas = document.getElementById('canvas');
+      const ctx = canvas.getContext("2d");
+      
+      window.addEventListener('mousemove', (e) => {
+        const data = {
+          x: e.clientX,
+          y: e.clientY
+        }
+        // drawPlayer(ctx, data.x, data.y);
+        ws.send(JSON.stringify(data));
+      })
+
+      ws.onmessage = function(event) {
+        const updatedPlayerData = JSON.parse(event.data.toString());
+        playersData = updatedPlayerData;
+      };
+
+      function drawPlayer(ctx, x, y, color) {
+        ctx.beginPath();
+        ctx.arc(x, y, 10, 0, 2 * Math.PI);
+        console.log(`rgb(${color})`);
+        ctx.fillStyle = `rgb(${color})`;
+        ctx.fill();
+      }
+
+      function update() {
+        
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        
+        if (playersData) {
+          for (const [uuid, data] of Object.entries(playersData)) {
+            const { x, y, color } = data;
+            drawPlayer(ctx, x, y, color);
+          }
+        }
+        requestAnimationFrame(update)
+      }
+      requestAnimationFrame(update)
+    </script>
+  </body>
+</html>
