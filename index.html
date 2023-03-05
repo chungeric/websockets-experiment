@@ -30,7 +30,6 @@
           x: e.clientX,
           y: e.clientY
         }
-        // drawPlayer(ctx, data.x, data.y);
         ws.send(JSON.stringify(data));
       })
 
@@ -42,7 +41,6 @@
       function drawPlayer(ctx, x, y, color) {
         ctx.beginPath();
         ctx.arc(x, y, 10, 0, 2 * Math.PI);
-        console.log(`rgb(${color})`);
         ctx.fillStyle = `rgb(${color})`;
         ctx.fill();
       }
