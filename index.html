@@ -46,7 +46,9 @@
           x: e.clientX / window.innerWidth,
           y: e.clientY / window.innerHeight
         }
-        ws.send(JSON.stringify(data));
+        if (ws.readyState === 1) {
+          ws.send(JSON.stringify(data));
+        }
       });
       window.addEventListener('resize', onResize);
 
