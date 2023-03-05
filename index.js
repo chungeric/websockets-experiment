@@ -29,11 +29,15 @@ function stringifyPlayersData(data) {
   return JSON.stringify(Object.fromEntries(data));
 }
 
+function rr(min, max) {
+  return Math.floor(Math.random() * (max - min) + min)
+}
+
 function generateRandomColor() {
-  const r = Math.round(Math.random() * 255);
-  const g = Math.round(Math.random() * 255);
-  const b = Math.round(Math.random() * 255);
-  return `${r}, ${g}, ${b}`;
+  const h = Math.round(Math.random() * 255);
+  const s = rr(80, 95);
+  const l = 65;
+  return `${h}, ${s}%, ${l}%`;
 }
 
 wss.on("connection", function connection(ws) {

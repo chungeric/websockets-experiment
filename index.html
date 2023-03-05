@@ -6,6 +6,8 @@
     <style>
       html, body {
         margin: 0;
+        height: 100%;
+        overflow: hidden;
       }
       canvas {
         position: fixed;
@@ -13,6 +15,7 @@
         left: 0;
         width: 100%;
         height: 100%;
+        background: black;
       }
     </style>
   </head>
@@ -24,32 +27,40 @@
       const ws = new WebSocket(`ws${window.location.protocol === 'https:' ? 's' : ''}://${location.host}`);
       const canvas = document.getElementById('canvas');
       const ctx = canvas.getContext("2d");
+
+      // functions
+      function onResize() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+      }
+      function drawPlayer(ctx, x, y, color) {
+        ctx.beginPath();
+        ctx.arc(x, y, 100, 0, 2 * Math.PI);
+        ctx.fillStyle = `hsl(${color})`;
+        ctx.fill();
+      }
       
-      window.addEventListener('mousemove', (e) => {
+      // event listeners
+      window.addEventListener('pointermove', (e) => {
         const data = {
           x: e.clientX / window.innerWidth,
           y: e.clientY / window.innerHeight
         }
         ws.send(JSON.stringify(data));
-      })
+      });
+      window.addEventListener('resize', onResize);
 
       ws.onmessage = function(event) {
         const updatedPlayerData = JSON.parse(event.data.toString());
         playersData = updatedPlayerData;
       };
 
-      function drawPlayer(ctx, x, y, color) {
-        ctx.beginPath();
-        ctx.arc(x, y, 10, 0, 2 * Math.PI);
-        ctx.fillStyle = `rgb(${color})`;
-        ctx.fill();
-      }
-
+      // animation loop
       function update() {
-        
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-        
+        ctx.globalAlpha = 0.2;
+        ctx.fillStyle = 'black';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.globalAlpha = 1;
         if (playersData) {
           for (const [uuid, data] of Object.entries(playersData)) {
             const { x: xPercent, y: yPercent, color } = data;
@@ -60,6 +71,9 @@
         }
         requestAnimationFrame(update)
       }
+
+      // on load
+      onResize();
       requestAnimationFrame(update)
     </script>
   </body>
