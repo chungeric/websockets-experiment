@@ -27,8 +27,8 @@
       
       window.addEventListener('mousemove', (e) => {
         const data = {
-          x: e.clientX,
-          y: e.clientY
+          x: e.clientX / window.innerWidth,
+          y: e.clientY / window.innerHeight
         }
         ws.send(JSON.stringify(data));
       })
@@ -52,7 +52,9 @@
         
         if (playersData) {
           for (const [uuid, data] of Object.entries(playersData)) {
-            const { x, y, color } = data;
+            const { x: xPercent, y: yPercent, color } = data;
+            const x = canvas.width * xPercent;
+            const y = canvas.height * yPercent;
             drawPlayer(ctx, x, y, color);
           }
         }
