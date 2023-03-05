@@ -21,7 +21,7 @@
     <canvas id="canvas"></canvas>
     <script>
       let playersData
-      const ws = new WebSocket(`ws://${location.host}`);
+      const ws = new WebSocket(`ws${window.location.protocol === 'https:' ? 's' : ''}://${location.host}`);
       const canvas = document.getElementById('canvas');
       const ctx = canvas.getContext("2d");
       
