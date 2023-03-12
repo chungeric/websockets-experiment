@@ -21,6 +21,7 @@ const store = {
   playersData: {},
   foodPos: { x: Math.random(), y: Math.random() },
 };
+let foodEaten = false;
 
 io.on('connection', (socket) => {
   console.log('connected', socket.id);
@@ -42,11 +43,15 @@ io.on('connection', (socket) => {
     io.emit('updated-data', store.playersData);
   });
   socket.on('food-eaten', () => {
-    store.playersData[socket.id].addToScore();
-    store.foodPos = { x: Math.random(), y: Math.random() };
-    io.emit('updated-data', store.playersData);
-    io.emit('update-scoreboard');
-    io.emit('food-spawned', store.foodPos);
+    if (!foodEaten) {
+      foodEaten = true;
+      store.playersData[socket.id].addToScore();
+      store.foodPos = { x: Math.random(), y: Math.random() };
+      io.emit('updated-data', store.playersData);
+      io.emit('update-scoreboard');
+      io.emit('food-spawned', store.foodPos);
+      foodEaten = false;
+    }
   })
   socket.on("disconnect", () => {
     delete store.playersData[socket.id];
