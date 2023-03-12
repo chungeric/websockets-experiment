@@ -45,6 +45,7 @@
       const ID_LEN = 5;
       let playersData;
       let foodPos;
+      let foodEaten = false;
       const canvas = document.getElementById('canvas');
       const ctx = canvas.getContext("2d");
 
@@ -98,6 +99,7 @@
       });
       socket.on('food-spawned', (newFoodPos) => {
         foodPos = newFoodPos;
+        foodEaten = false;
       })
 
       // animation loop
@@ -120,7 +122,10 @@
                 foodScreenPos.y + 8 > playerScreenPos.y - 20 &&
                 foodScreenPos.y - 8 < playerScreenPos.y + 20
               ) {
-                socket.emit('food-eaten');
+                if (!foodEaten) {
+                  socket.emit('food-eaten');
+                  foodEaten = true;
+                }
               }
             }
           }
