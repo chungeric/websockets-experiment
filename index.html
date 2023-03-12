@@ -14,6 +14,7 @@
         overflow: hidden;
         overscroll-behavior: none;
         font-family: Arial, Helvetica, sans-serif;
+        font-size: max(1vw, 12px);
       }
       canvas {
         position: fixed;
@@ -23,14 +24,17 @@
         height: 100%;
         background: black;
       }
-      #scoreboard {
+      .scoreboard-wrapper {
+        background: rgba(255,255,255,0.1);
+        pointer-events: none;
         position: fixed;
-        top: 0;
-        left: 0;
+        top: 16px;
+        left: 16px;
         width: auto;
         height: auto;
-        color: white;
-        padding: 20px;
+        color: #ddd;
+        padding: 16px;
+        border-radius: 4px;
         letter-spacing: 0.06em;
       }
     </style>
@@ -38,11 +42,15 @@
 
   <body>
     <canvas id="canvas"></canvas>
-    <div id="scoreboard"></div>
+    <div class="scoreboard-wrapper">
+      <span>Scoreboard</span>
+      <div id="scoreboard"></div>
+    </div>
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <script>
       const socket = io();
       const ID_LEN = 5;
+      const FOOD_RADIUS = 8;
       let playersData;
       let foodPos;
       let foodEaten = false;
@@ -54,9 +62,19 @@
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
       }
-      function drawPlayer(ctx, x, y, color, trail) {
-        drawCircle(ctx, x, y, 20, color, 1);
-        trail.forEach(trailItem => drawCircle(ctx, trailItem.x, trailItem.y, (1 - trailItem.age / 30) * 20, color, 1 - trailItem.age / 30));
+      function drawPlayer(ctx, player) {
+        const { x, y, color, trail, lifespan } = player;
+        drawCircle(ctx, x, y, player.radius, color, 1);
+        trail.forEach(trailItem => {
+          drawCircle(
+            ctx,
+            trailItem.x,
+            trailItem.y,
+            (1 - trailItem.age / lifespan) * player.radius,
+            color,
+            1 - trailItem.age / lifespan
+          );
+        });
       }
       function drawCircle(ctx, x, y, r, color, alpha) {
         ctx.globalAlpha = alpha;
@@ -80,7 +98,7 @@
       window.addEventListener('resize', onResize);
 
       // socket event listeners
-      socket.on('updated-data', (data) => {
+      socket.on('update-data', (data) => {
         playersData = data;
       });
       socket.on('update-scoreboard', (data) => {
@@ -88,16 +106,16 @@
         scoreboard.innerHTML = '';
         // Add self to scoreboard
         const div = document.createElement('div');
-        div.innerHTML = `YOU (${socket.id.slice(0, ID_LEN)}):${playersData[socket.id].score}`;
+        div.innerHTML = `YOU (${socket.id.slice(0, ID_LEN)}): ${playersData[socket.id].score}`;
         scoreboard.appendChild(div);
         // Add others to scoreboard
         for (const [playerId, playerData] of Object.entries(playersData).filter(([playerId, _]) => playerId !== socket.id)) {
           const div = document.createElement('div');
-          div.innerHTML = `${playerId.slice(0, ID_LEN)}:${playerData.score}`;
+          div.innerHTML = `${playerId.slice(0, ID_LEN)}: ${playerData.score}`;
           scoreboard.appendChild(div);
         }
       });
-      socket.on('food-spawned', (newFoodPos) => {
+      socket.on('spawn-food', (newFoodPos) => {
         foodPos = newFoodPos;
         foodEaten = false;
       })
@@ -107,20 +125,22 @@
         ctx.fillStyle = 'black';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         if (foodPos) {
-          drawCircle(ctx, foodPos.x, foodPos.y, 8, '0,70%,100%', 1);
+          drawCircle(ctx, foodPos.x, foodPos.y, FOOD_RADIUS, '0,70%,100%', 1);
         }
         if (playersData) {
           for (const [playerId, playerData] of Object.entries(playersData)) {
-            drawPlayer(ctx, playerData.x, playerData.y, playerData.color, playerData.trail);
+            if (playerData.x !== null) {
+              drawPlayer(ctx, playerData);
+            }
             // detect food intersection
             if (playerId === socket.id) {
               const playerScreenPos = { x: playerData.x * canvas.width, y: playerData.y * canvas.height };
               const foodScreenPos = { x: foodPos.x * canvas.width, y: foodPos.y * canvas.height };
               if (
-                foodScreenPos.x + 8 > playerScreenPos.x - 20 &&
-                foodScreenPos.x - 8 < playerScreenPos.x + 20 &&
-                foodScreenPos.y + 8 > playerScreenPos.y - 20 &&
-                foodScreenPos.y - 8 < playerScreenPos.y + 20
+                foodScreenPos.x + FOOD_RADIUS > playerScreenPos.x - playerData.radius &&
+                foodScreenPos.x - FOOD_RADIUS < playerScreenPos.x + playerData.radius &&
+                foodScreenPos.y + FOOD_RADIUS > playerScreenPos.y - playerData.radius &&
+                foodScreenPos.y - FOOD_RADIUS < playerScreenPos.y + playerData.radius
               ) {
                 if (!foodEaten) {
                   socket.emit('food-eaten');

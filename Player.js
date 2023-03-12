@@ -11,44 +11,39 @@ function generateRandomColor() {
 
 class Player {
   constructor() {
-    this.x = 0;
-    this.y = 0;
+    this.x = null;
+    this.y = null;
+    this.hasMoved = false;
     this.score = 0;
     this.color = generateRandomColor(); // hsl
     this.trail = []; // [{ x, y, age }]
+    this.lifespan = 30;
+    this.radius = 12;
   }
-  update(x, y) {
+  update() {
     this.trail.forEach((trailItem, i) => {
-      this.trail[i] = { ...trailItem, age: trailItem.age + 1 };
-      if (trailItem.age >= 30) this.trail.splice(i, 1);
+      let newTrailItemX = trailItem.x + ((Math.random() * 0.01 - 0.005) * (trailItem.age / this.lifespan));
+      let newTrailItemY = trailItem.y + ((Math.random() * 0.01 - 0.005) * (trailItem.age / this.lifespan));
+      if (
+        trailItem.x === this.x &&
+        trailItem.y === this.y
+      ) {
+        newTrailItemX = this.x;
+        newTrailItemY = this.y;
+      }
+      this.trail[i] = { x: newTrailItemX, y: newTrailItemY, age: trailItem.age + 1 };
+      if (trailItem.age >= this.lifespan) this.trail.splice(i, 1);
     })
     this.trail.push({ x: this.x, y: this.y, age: 0 });
-    if (x) {
-      this.x = x;
-    }
-    if (y) {
-      this.y = y;
-    }
+  }
+  updatePos(x, y) {
+    if (!this.hasMoved) this.hasMoved = true;
+    this.x = x;
+    this.y = y;
   }
   addToScore(pointsToAdd = 1) {
     this.score += pointsToAdd;
   }
-  // drawCircle(ctx, x, y, alpha) {
-  //   ctx.globalAlpha = alpha;
-  //   ctx.fillStyle = 'black';
-  //   ctx.fillRect(0, 0, canvas.width, canvas.height);
-  //   const xx = ctx.canvas.clientWidth * x;
-  //   const yy = ctx.canvas.clientHeight * y;
-  //   ctx.beginPath();
-  //   ctx.arc(xx, yy, 100, 0, 2 * Math.PI);
-  //   ctx.fillStyle = `hsl(${this.color})`;
-  //   ctx.fill();
-  //   ctx.globalAlpha = 1;
-  // }
-  // draw(ctx) {
-  //   this.drawCircle(ctx, this.x, this.y, 1);
-  //   this.trail.forEach(trailItem => this.drawCircle(ctx, trailItem.x, trailItem.y, 1 - trailItem.age / this.lifetime));
-  // }
 }
 
 module.exports = Player;
