@@ -1,13 +1,19 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta charset="UTF-8" />
     <title>Web Sockets Experiment</title>
     <style>
+      * {
+        box-sizing: border-box;
+      }
       html, body {
         margin: 0;
         height: 100%;
         overflow: hidden;
+        overscroll-behavior: none;
+        font-family: Arial, Helvetica, sans-serif;
       }
       canvas {
         position: fixed;
@@ -17,14 +23,28 @@
         height: 100%;
         background: black;
       }
+      #scoreboard {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: auto;
+        height: auto;
+        color: white;
+        padding: 20px;
+        letter-spacing: 0.06em;
+      }
     </style>
   </head>
 
   <body>
     <canvas id="canvas"></canvas>
+    <div id="scoreboard"></div>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <script>
-      let playersData
-      const ws = new WebSocket(`ws${window.location.protocol === 'https:' ? 's' : ''}://${location.host}`);
+      const socket = io();
+      const ID_LEN = 5;
+      let playersData;
+      let foodPos;
       const canvas = document.getElementById('canvas');
       const ctx = canvas.getContext("2d");
 
@@ -33,42 +53,76 @@
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
       }
-      function drawPlayer(ctx, x, y, color) {
+      function drawPlayer(ctx, x, y, color, trail) {
+        drawCircle(ctx, x, y, 20, color, 1);
+        trail.forEach(trailItem => drawCircle(ctx, trailItem.x, trailItem.y, (1 - trailItem.age / 30) * 20, color, 1 - trailItem.age / 30));
+      }
+      function drawCircle(ctx, x, y, r, color, alpha) {
+        ctx.globalAlpha = alpha;
+        const xx = ctx.canvas.clientWidth * x;
+        const yy = ctx.canvas.clientHeight * y;
         ctx.beginPath();
-        ctx.arc(x, y, 100, 0, 2 * Math.PI);
+        ctx.arc(xx, yy, r, 0, 2 * Math.PI);
         ctx.fillStyle = `hsl(${color})`;
         ctx.fill();
+        ctx.globalAlpha = 1;
       }
-      
+
       // event listeners
       window.addEventListener('pointermove', (e) => {
-        const data = {
+        const updatedPlayerXY = {
           x: e.clientX / window.innerWidth,
           y: e.clientY / window.innerHeight
         }
-        if (ws.readyState === 1) {
-          ws.send(JSON.stringify(data));
-        }
+        socket.emit('move', updatedPlayerXY);
       });
       window.addEventListener('resize', onResize);
 
-      ws.onmessage = function(event) {
-        const updatedPlayerData = JSON.parse(event.data.toString());
-        playersData = updatedPlayerData;
-      };
+      // socket event listeners
+      socket.on('updated-data', (data) => {
+        playersData = data;
+      });
+      socket.on('update-scoreboard', (data) => {
+        const scoreboard = document.getElementById('scoreboard');
+        scoreboard.innerHTML = '';
+        // Add self to scoreboard
+        const div = document.createElement('div');
+        div.innerHTML = `YOU (${socket.id.slice(0, ID_LEN)}):${playersData[socket.id].score}`;
+        scoreboard.appendChild(div);
+        // Add others to scoreboard
+        for (const [playerId, playerData] of Object.entries(playersData).filter(([playerId, _]) => playerId !== socket.id)) {
+          const div = document.createElement('div');
+          div.innerHTML = `${playerId.slice(0, ID_LEN)}:${playerData.score}`;
+          scoreboard.appendChild(div);
+        }
+      });
+      socket.on('food-spawned', (newFoodPos) => {
+        foodPos = newFoodPos;
+      })
 
       // animation loop
       function update() {
-        ctx.globalAlpha = 0.2;
         ctx.fillStyle = 'black';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.globalAlpha = 1;
+        if (foodPos) {
+          drawCircle(ctx, foodPos.x, foodPos.y, 8, '0,70%,100%', 1);
+        }
         if (playersData) {
-          for (const [uuid, data] of Object.entries(playersData)) {
-            const { x: xPercent, y: yPercent, color } = data;
-            const x = canvas.width * xPercent;
-            const y = canvas.height * yPercent;
-            drawPlayer(ctx, x, y, color);
+          for (const [playerId, playerData] of Object.entries(playersData)) {
+            drawPlayer(ctx, playerData.x, playerData.y, playerData.color, playerData.trail);
+            // detect food intersection
+            if (playerId === socket.id) {
+              const playerScreenPos = { x: playerData.x * canvas.width, y: playerData.y * canvas.height };
+              const foodScreenPos = { x: foodPos.x * canvas.width, y: foodPos.y * canvas.height };
+              if (
+                foodScreenPos.x + 8 > playerScreenPos.x - 20 &&
+                foodScreenPos.x - 8 < playerScreenPos.x + 20 &&
+                foodScreenPos.y + 8 > playerScreenPos.y - 20 &&
+                foodScreenPos.y - 8 < playerScreenPos.y + 20
+              ) {
+                socket.emit('food-eaten');
+              }
+            }
           }
         }
         requestAnimationFrame(update)
